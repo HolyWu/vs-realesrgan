@@ -7,7 +7,7 @@ from .utils import RealESRGANer
 
 
 def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile: int=0, tile_pad: int=10, pre_pad: int=0,
-               half: bool=False, device_type: str='cuda', device_index: int=0) -> vs.VideoNode:
+               device_type: str='cuda', device_index: int=0, fp16: bool=False) -> vs.VideoNode:
     '''
     Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
 
@@ -24,11 +24,11 @@ def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile: int=0,
 
         pre_pad: Pre padding size at each border.
 
-        half: Use half precision.
-
         device_type: Device type on which the tensor is allocated. Must be 'cuda' or 'cpu'.
 
         device_index: Device ordinal for the device type.
+
+        fp16: fp16 mode for faster and more lightweight inference on cards with Tensor Cores.
     '''
     if not isinstance(clip, vs.VideoNode):
         raise vs.Error('RealESRGAN: this is not a clip')
@@ -60,7 +60,7 @@ def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile: int=0,
 
     model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=6 if anime else 23, num_grow_ch=32, scale=scale)
 
-    upsampler = RealESRGANer(device, scale, model_path, model, tile, tile_pad, pre_pad, half)
+    upsampler = RealESRGANer(device, scale, model_path, model, tile, tile_pad, pre_pad, fp16)
 
     new_clip = clip.std.BlankClip(width=clip.width * scale, height=clip.height * scale)
 
