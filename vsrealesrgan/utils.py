@@ -6,7 +6,7 @@ from torch.nn import functional as F
 
 class RealESRGANer():
 
-    def __init__(self, device, scale, model_path, tile=0, tile_pad=10, pre_pad=10, half=False):
+    def __init__(self, device, scale, model_path, model=None, tile=0, tile_pad=10, pre_pad=10, half=False):
         self.device = device
         self.scale = scale
         self.tile_size = tile
@@ -16,7 +16,8 @@ class RealESRGANer():
         self.half = half
 
         # initialize model
-        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=scale)
+        if model is None:
+            model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=scale)
 
         loadnet = torch.load(model_path)
         if 'params_ema' in loadnet:
@@ -88,7 +89,7 @@ class RealESRGANer():
                 # input tile dimensions
                 input_tile_width = input_end_x - input_start_x
                 input_tile_height = input_end_y - input_start_y
-                tile_idx = y * tiles_x + x + 1
+
                 input_tile = self.img[:, :, input_start_y_pad:input_end_y_pad, input_start_x_pad:input_end_x_pad]
 
                 # upscale tile
@@ -97,7 +98,6 @@ class RealESRGANer():
                         output_tile = self.model(input_tile)
                 except Exception as error:
                     print('Error', error)
-                #print(f'\tTile {tile_idx}/{tiles_x * tiles_y}')
 
                 # output tile area on total image
                 output_start_x = input_start_x * self.scale

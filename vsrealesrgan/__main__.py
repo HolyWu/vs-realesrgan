@@ -14,3 +14,4 @@ def download_model(url: str) -> None:
 if __name__ == '__main__':
     download_model('https://github.com/HolyWu/vs-realesrgan/releases/download/model/RealESRGAN_x2plus.pth')
     download_model('https://github.com/HolyWu/vs-realesrgan/releases/download/model/RealESRGAN_x4plus.pth')
+    download_model('https://github.com/HolyWu/vs-realesrgan/releases/download/model/RealESRGAN_x4plus_anime_6B.pth')
