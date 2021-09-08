@@ -5,6 +5,8 @@ import vapoursynth as vs
 from .rrdbnet_arch import RRDBNet
 from .utils import RealESRGANer
 
+vs_api_below4 = vs.__api_version__.api_major < 4
+
 
 def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile_x: int=0, tile_y: int=0, tile_pad: int=10, pre_pad: int=0,
                device_type: str='cuda', device_index: int=0, fp16: bool=False) -> vs.VideoNode:
@@ -75,13 +77,13 @@ def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile_x: int=
 
 
 def frame_to_tensor(f: vs.VideoFrame) -> torch.Tensor:
-    arr = np.stack([np.asarray(f.get_read_array(plane)) for plane in range(f.format.num_planes)])
+    arr = np.stack([np.asarray(f.get_read_array(plane) if vs_api_below4 else f[plane]) for plane in range(f.format.num_planes)])
     return torch.from_numpy(arr).unsqueeze(0)
 
 
 def tensor_to_frame(t: torch.Tensor, f: vs.VideoFrame) -> vs.VideoFrame:
-    arr = t.data.squeeze().cpu().numpy()
+    arr = t.squeeze(0).detach().cpu().numpy()
     fout = f.copy()
     for plane in range(fout.format.num_planes):
-        np.copyto(np.asarray(fout.get_write_array(plane)), arr[plane, :, :])
+        np.copyto(np.asarray(fout.get_write_array(plane) if vs_api_below4 else fout[plane]), arr[plane, :, :])
     return fout
