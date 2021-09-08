@@ -6,10 +6,11 @@ from torch.nn import functional as F
 
 class RealESRGANer():
 
-    def __init__(self, device, scale, model_path, model=None, tile=0, tile_pad=10, pre_pad=10, half=False):
+    def __init__(self, device, scale, model_path, model=None, tile_x=0, tile_y=0, tile_pad=10, pre_pad=10, half=False):
         self.device = device
         self.scale = scale
-        self.tile_size = tile
+        self.tile_x = tile_x
+        self.tile_y = tile_y
         self.tile_pad = tile_pad
         self.pre_pad = pre_pad
         self.mod_scale = None
@@ -65,20 +66,21 @@ class RealESRGANer():
 
         # start with black image
         self.output = self.img.new_zeros(output_shape)
-        tiles_x = math.ceil(width / self.tile_size)
-        tiles_y = math.ceil(height / self.tile_size)
+        tiles_x = math.ceil(width / self.tile_x)
+        tiles_y = math.ceil(height / self.tile_y)
 
         # loop over all tiles
         for y in range(tiles_y):
             for x in range(tiles_x):
                 # extract tile from input image
-                ofs_x = x * self.tile_size
-                ofs_y = y * self.tile_size
+                ofs_x = x * self.tile_x
+                ofs_y = y * self.tile_y
+
                 # input tile area on total image
                 input_start_x = ofs_x
-                input_end_x = min(ofs_x + self.tile_size, width)
+                input_end_x = min(ofs_x + self.tile_x, width)
                 input_start_y = ofs_y
-                input_end_y = min(ofs_y + self.tile_size, height)
+                input_end_y = min(ofs_y + self.tile_y, height)
 
                 # input tile area on total image with padding
                 input_start_x_pad = max(input_start_x - self.tile_pad, 0)
@@ -130,7 +132,7 @@ class RealESRGANer():
     @torch.no_grad()
     def enhance(self, img):
         self.pre_process(img)
-        if self.tile_size > 0:
+        if self.tile_x > 0 and self.tile_y > 0:
             self.tile_process()
         else:
             self.process()

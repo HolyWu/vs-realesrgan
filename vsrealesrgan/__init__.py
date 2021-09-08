@@ -6,7 +6,7 @@ from .rrdbnet_arch import RRDBNet
 from .utils import RealESRGANer
 
 
-def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile: int=0, tile_pad: int=10, pre_pad: int=0,
+def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile_x: int=0, tile_y: int=0, tile_pad: int=10, pre_pad: int=0,
                device_type: str='cuda', device_index: int=0, fp16: bool=False) -> vs.VideoNode:
     '''
     Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
@@ -18,7 +18,9 @@ def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile: int=0,
 
         anime: Use model optimized for anime. Currently only x4 is supported.
 
-        tile: Tile size, 0 for no tile.
+        tile_x, tile_y: Tile width and height respectively, 0 for no tiling.
+            It's recommended that the input's width and height is divisible by the tile's width and height respectively.
+            Set it to the maximum value that your GPU supports to reduce its impact on the output.
 
         tile_pad: Tile padding.
 
@@ -60,7 +62,7 @@ def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile: int=0,
 
     model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=6 if anime else 23, num_grow_ch=32, scale=scale)
 
-    upsampler = RealESRGANer(device, scale, model_path, model, tile, tile_pad, pre_pad, fp16)
+    upsampler = RealESRGANer(device, scale, model_path, model, tile_x, tile_y, tile_pad, pre_pad, fp16)
 
     new_clip = clip.std.BlankClip(width=clip.width * scale, height=clip.height * scale)
 
