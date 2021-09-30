@@ -56,6 +56,9 @@ def RealESRGAN(clip: vs.VideoNode, scale: int = 2, anime: bool = False, tile_x: 
     if device_type == 'cuda' and not torch.cuda.is_available():
         raise vs.Error('RealESRGAN: CUDA is not available')
 
+    if os.path.getsize(os.path.join(os.path.dirname(__file__), 'RealESRGAN_x2plus.pth')) == 0:
+        raise vs.Error("RealESRGAN: model files have not been downloaded. run 'python -m vsrealesrgan' first")
+
     device = torch.device(device_type, device_index)
     if device_type == 'cuda':
         torch.backends.cudnn.enabled = True
