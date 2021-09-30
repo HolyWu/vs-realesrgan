@@ -1,15 +1,17 @@
-import numpy as np
 import os
+
+import numpy as np
 import torch
 import vapoursynth as vs
+
 from .rrdbnet_arch import RRDBNet
 from .utils import RealESRGANer
 
 vs_api_below4 = vs.__api_version__.api_major < 4
 
 
-def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile_x: int=0, tile_y: int=0, tile_pad: int=10, pre_pad: int=0,
-               device_type: str='cuda', device_index: int=0, fp16: bool=False) -> vs.VideoNode:
+def RealESRGAN(clip: vs.VideoNode, scale: int = 2, anime: bool = False, tile_x: int = 0, tile_y: int = 0, tile_pad: int = 10, pre_pad: int = 0,
+               device_type: str = 'cuda', device_index: int = 0, fp16: bool = False) -> vs.VideoNode:
     '''
     Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
 
@@ -66,13 +68,12 @@ def RealESRGAN(clip: vs.VideoNode, scale: int=2, anime: bool=False, tile_x: int=
 
     upsampler = RealESRGANer(device, scale, model_path, model, tile_x, tile_y, tile_pad, pre_pad, fp16)
 
-    new_clip = clip.std.BlankClip(width=clip.width * scale, height=clip.height * scale)
-
     def realesrgan(n: int, f: vs.VideoFrame) -> vs.VideoFrame:
         img = frame_to_tensor(f[0])
         output = upsampler.enhance(img)
-        return tensor_to_frame(output, f[1])
+        return tensor_to_frame(output, f[1].copy())
 
+    new_clip = clip.std.BlankClip(width=clip.width * scale, height=clip.height * scale)
     return new_clip.std.ModifyFrame(clips=[clip, new_clip], selector=realesrgan)
 
 
@@ -83,7 +84,6 @@ def frame_to_tensor(f: vs.VideoFrame) -> torch.Tensor:
 
 def tensor_to_frame(t: torch.Tensor, f: vs.VideoFrame) -> vs.VideoFrame:
     arr = t.squeeze(0).detach().cpu().numpy()
-    fout = f.copy()
-    for plane in range(fout.format.num_planes):
-        np.copyto(np.asarray(fout.get_write_array(plane) if vs_api_below4 else fout[plane]), arr[plane, :, :])
-    return fout
+    for plane in range(f.format.num_planes):
+        np.copyto(np.asarray(f.get_write_array(plane) if vs_api_below4 else f[plane]), arr[plane, :, :])
+    return f
