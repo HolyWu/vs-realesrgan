@@ -71,6 +71,7 @@ def RealESRGAN(clip: vs.VideoNode, scale: int = 2, anime: bool = False, tile_x: 
 
     upsampler = RealESRGANer(device, scale, model_path, model, tile_x, tile_y, tile_pad, pre_pad, fp16)
 
+    @torch.inference_mode()
     def realesrgan(n: int, f: vs.VideoFrame) -> vs.VideoFrame:
         img = frame_to_tensor(f[0])
         output = upsampler.enhance(img)

@@ -129,7 +129,6 @@ class RealESRGANer():
             self.output = self.output[:, :, 0:h - self.pre_pad * self.scale, 0:w - self.pre_pad * self.scale]
         return self.output
 
-    @torch.no_grad()
     def enhance(self, img):
         self.pre_process(img)
         if self.tile_x > 0 and self.tile_y > 0:
