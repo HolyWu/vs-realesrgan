@@ -10,8 +10,18 @@ from .utils import RealESRGANer
 vs_api_below4 = vs.__api_version__.api_major < 4
 
 
-def RealESRGAN(clip: vs.VideoNode, scale: int = 2, anime: bool = False, tile_x: int = 0, tile_y: int = 0, tile_pad: int = 10, pre_pad: int = 0,
-               device_type: str = 'cuda', device_index: int = 0, fp16: bool = False) -> vs.VideoNode:
+def RealESRGAN(
+    clip: vs.VideoNode,
+    scale: int = 2,
+    anime: bool = False,
+    tile_x: int = 0,
+    tile_y: int = 0,
+    tile_pad: int = 10,
+    pre_pad: int = 0,
+    device_type: str = 'cuda',
+    device_index: int = 0,
+    fp16: bool = False,
+) -> vs.VideoNode:
     '''
     Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
 
