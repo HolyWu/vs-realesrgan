@@ -7,6 +7,8 @@ import vapoursynth as vs
 from .rrdbnet_arch import RRDBNet
 from .utils import RealESRGANer
 
+dirname = os.path.dirname(__file__)
+
 
 def RealESRGAN(
     clip: vs.VideoNode,
@@ -64,7 +66,7 @@ def RealESRGAN(
     if device_type == 'cuda' and not torch.cuda.is_available():
         raise vs.Error('RealESRGAN: CUDA is not available')
 
-    if os.path.getsize(os.path.join(os.path.dirname(__file__), 'RealESRGAN_x2plus.pth')) == 0:
+    if os.path.getsize(os.path.join(dirname, 'RealESRGAN_x2plus.pth')) == 0:
         raise vs.Error("RealESRGAN: model files have not been downloaded. run 'python -m vsrealesrgan' first")
 
     device = torch.device(device_type, device_index)
@@ -73,7 +75,7 @@ def RealESRGAN(
         torch.backends.cudnn.benchmark = True
 
     model_name = f'RealESRGAN_x{scale}plus' + ('_anime_6B' if anime else '') + '.pth'
-    model_path = os.path.join(os.path.dirname(__file__), model_name)
+    model_path = os.path.join(dirname, model_name)
 
     model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=6 if anime else 23, num_grow_ch=32, scale=scale)
 
