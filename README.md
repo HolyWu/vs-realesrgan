@@ -6,7 +6,7 @@ Ported from https://github.com/xinntao/Real-ESRGAN
 
 ## Dependencies
 - [NumPy](https://numpy.org/install)
-- [PyTorch](https://pytorch.org/get-started), preferably with CUDA. Note that `torchvision` and `torchaudio` are not required and hence can be omitted from the command.
+- [PyTorch](https://pytorch.org/get-started), preferably with CUDA. Note that `torchaudio` is not required and hence can be omitted from the command.
 - [VapourSynth](http://www.vapoursynth.com/)
 
 
