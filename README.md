@@ -1,7 +1,5 @@
 # Real-ESRGAN
-Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
-
-Ported from https://github.com/xinntao/Real-ESRGAN
+Real-ESRGAN function for VapourSynth, based on https://github.com/xinntao/Real-ESRGAN.
 
 
 ## Dependencies
