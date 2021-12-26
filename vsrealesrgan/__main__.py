@@ -18,3 +18,5 @@ if __name__ == '__main__':
     download_model('https://github.com/HolyWu/vs-realesrgan/releases/download/model/RealESRGAN_x2plus.pth')
     download_model('https://github.com/HolyWu/vs-realesrgan/releases/download/model/RealESRGAN_x4plus.pth')
     download_model('https://github.com/HolyWu/vs-realesrgan/releases/download/model/RealESRGAN_x4plus_anime_6B.pth')
+    download_model('https://github.com/HolyWu/vs-realesrgan/releases/download/model/RealESRGANv2-animevideo-xsx2.pth')
+    download_model('https://github.com/HolyWu/vs-realesrgan/releases/download/model/RealESRGANv2-animevideo-xsx4.pth')

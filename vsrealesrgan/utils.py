@@ -1,10 +1,22 @@
 import math
 import torch
-from .rrdbnet_arch import RRDBNet
 from torch.nn import functional as F
 
 
 class RealESRGANer():
+    """A helper class for upsampling images with RealESRGAN.
+
+    Args:
+        scale (int): Upsampling scale factor used in the networks. It is usually 2 or 4.
+        model_path (str): The path to the pretrained model. It can be urls (will first download it automatically).
+        model (nn.Module): The defined network. Default: None.
+        tile (int): As too large images result in the out of GPU memory issue, so this tile option will first crop
+            input images into tiles, and then process each of them. Finally, they will be merged into one image.
+            0 denotes for do not use tile. Default: 0.
+        tile_pad (int): The pad size for each tile, to remove border artifacts. Default: 10.
+        pre_pad (int): Pad the input images to avoid border artifacts. Default: 10.
+        half (float): Whether to use half precision during inference. Default: False.
+    """
 
     def __init__(self, device, scale, model_path, model=None, tile_x=0, tile_y=0, tile_pad=10, pre_pad=10, half=False):
         self.device = device
@@ -17,10 +29,8 @@ class RealESRGANer():
         self.half = half
 
         # initialize model
-        if model is None:
-            model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=scale)
-
-        loadnet = torch.load(model_path)
+        loadnet = torch.load(model_path, map_location=torch.device('cpu'))
+        # prefer to use params_ema
         if 'params_ema' in loadnet:
             keyname = 'params_ema'
         else:
@@ -32,6 +42,8 @@ class RealESRGANer():
             self.model = self.model.half()
 
     def pre_process(self, img):
+        """Pre-process, such as pre-pad and mod pad, so that the images can be divisible
+        """
         self.img = img.to(self.device)
         if self.half:
             self.img = self.img.half()
@@ -39,7 +51,7 @@ class RealESRGANer():
         # pre_pad
         if self.pre_pad != 0:
             self.img = F.pad(self.img, (0, self.pre_pad, 0, self.pre_pad), 'reflect')
-        # mod pad
+        # mod pad for divisible borders
         if self.scale == 2:
             self.mod_scale = 2
         elif self.scale == 1:
@@ -54,10 +66,14 @@ class RealESRGANer():
             self.img = F.pad(self.img, (0, self.mod_pad_w, 0, self.mod_pad_h), 'reflect')
 
     def process(self):
+        # model inference
         self.output = self.model(self.img)
 
     def tile_process(self):
-        """Modified from: https://github.com/ata4/esrgan-launcher
+        """It will first crop input images to tiles, and then process each tile.
+        Finally, all the processed tiles are merged into one images.
+
+        Modified from: https://github.com/ata4/esrgan-launcher
         """
         batch, channel, height, width = self.img.shape
         output_height = height * self.scale
@@ -66,6 +82,7 @@ class RealESRGANer():
 
         # start with black image
         self.output = self.img.new_zeros(output_shape)
+
         tiles_x = math.ceil(width / self.tile_x)
         tiles_y = math.ceil(height / self.tile_y)
 
@@ -98,7 +115,7 @@ class RealESRGANer():
                 try:
                     with torch.no_grad():
                         output_tile = self.model(input_tile)
-                except Exception as error:
+                except RuntimeError as error:
                     print('Error', error)
 
                 # output tile area on total image
@@ -129,7 +146,9 @@ class RealESRGANer():
             self.output = self.output[:, :, 0:h - self.pre_pad * self.scale, 0:w - self.pre_pad * self.scale]
         return self.output
 
+    @torch.no_grad()
     def enhance(self, img):
+        # ------------------- process image ------------------- #
         self.pre_process(img)
         if self.tile_x > 0 and self.tile_y > 0:
             self.tile_process()
