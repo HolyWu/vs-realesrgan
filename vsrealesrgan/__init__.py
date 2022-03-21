@@ -17,7 +17,6 @@ def RealESRGAN(
     tile_w: int = 0,
     tile_h: int = 0,
     tile_pad: int = 10,
-    pre_pad: int = 0,
     device_type: str = 'cuda',
     device_index: int = 0,
     fp16: bool = False,
@@ -40,8 +39,6 @@ def RealESRGAN(
             Set it to the maximum value that your GPU supports to reduce its impact on the output.
 
         tile_pad: Tile padding.
-
-        pre_pad: Pre padding size at each border.
 
         device_type: Device type on which the tensor is allocated. Must be 'cuda' or 'cpu'.
 
@@ -98,7 +95,7 @@ def RealESRGAN(
     model_path = os.path.join(dirname, model_name)
 
     upsampler = RealESRGANer(
-        device=device, scale=netscale, model_path=model_path, model=model, tile_x=tile_w, tile_y=tile_h, tile_pad=tile_pad, pre_pad=pre_pad, half=fp16
+        device=device, scale=netscale, model_path=model_path, model=model, tile_x=tile_w, tile_y=tile_h, tile_pad=tile_pad, pre_pad=0, half=fp16
     )
 
     @torch.inference_mode()
