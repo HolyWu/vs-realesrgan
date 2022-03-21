@@ -14,8 +14,8 @@ dirname = os.path.dirname(__file__)
 def RealESRGAN(
     clip: vs.VideoNode,
     model_type: int = 0,
-    tile_x: int = 0,
-    tile_y: int = 0,
+    tile_w: int = 0,
+    tile_h: int = 0,
     tile_pad: int = 10,
     pre_pad: int = 0,
     device_type: str = 'cuda',
@@ -35,7 +35,7 @@ def RealESRGAN(
             3 = RealESRGANv2-animevideo-xsx2 (x2 model optimized for anime videos)
             4 = RealESRGANv2-animevideo-xsx4 (x4 model optimized for anime videos)
 
-        tile_x, tile_y: Tile width and height respectively, 0 for no tiling.
+        tile_w, tile_h: Tile width and height respectively, 0 for no tiling.
             It's recommended that the input's width and height is divisible by the tile's width and height respectively.
             Set it to the maximum value that your GPU supports to reduce its impact on the output.
 
@@ -98,7 +98,7 @@ def RealESRGAN(
     model_path = os.path.join(dirname, model_name)
 
     upsampler = RealESRGANer(
-        device=device, scale=netscale, model_path=model_path, model=model, tile_x=tile_x, tile_y=tile_y, tile_pad=tile_pad, pre_pad=pre_pad, half=fp16
+        device=device, scale=netscale, model_path=model_path, model=model, tile_x=tile_w, tile_y=tile_h, tile_pad=tile_pad, pre_pad=pre_pad, half=fp16
     )
 
     @torch.inference_mode()
