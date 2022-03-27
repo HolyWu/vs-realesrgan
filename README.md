@@ -1,11 +1,14 @@
 # Real-ESRGAN
-Real-ESRGAN function for VapourSynth, based on https://github.com/xinntao/Real-ESRGAN.
+Training Real-World Blind Super-Resolution with Pure Synthetic Data, based on https://github.com/xinntao/Real-ESRGAN.
 
 
 ## Dependencies
 - [NumPy](https://numpy.org/install)
-- [PyTorch](https://pytorch.org/get-started), preferably with CUDA. Note that `torchaudio` is not required and hence can be omitted from the command.
-- [VapourSynth](http://www.vapoursynth.com/)
+- [ONNX Runtime](https://onnxruntime.ai/). CUDA and TensorRT require `onnxruntime-gpu`, while DirectML requires `onnxruntime-directml`. Note that only one of `onnxruntime`, `onnxruntime-gpu` and `onnxruntime-directml` should be installed at a time in any one environment.
+- [VapourSynth](http://www.vapoursynth.com/) R55 or newer.
+- (Optional) [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
+- (Optional) [cuDNN](https://developer.nvidia.com/cudnn)
+- (Optional) [TensorRT](https://developer.nvidia.com/tensorrt)
 
 
 ## Installation
