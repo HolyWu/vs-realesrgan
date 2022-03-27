@@ -10,7 +10,7 @@ dir_name = osp.dirname(__file__)
 
 def RealESRGAN(
     clip: vs.VideoNode,
-    model_type: int = 0,
+    model: int = 0,
     tile_w: int = 0,
     tile_h: int = 0,
     tile_pad: int = 10,
@@ -28,7 +28,7 @@ def RealESRGAN(
     Parameters:
         clip: Clip to process. Only RGB format with float sample type of 32 bit depth is supported.
 
-        model_type: Model type to use.
+        model: Model to use.
             0 = RealESRGAN_x2plus (x2 model for general images)
             1 = RealESRGAN_x4plus (x4 model for general images)
             2 = RealESRGAN_x4plus_anime_6B (x4 model optimized for anime images)
@@ -83,22 +83,22 @@ def RealESRGAN(
     if clip.format.id != vs.RGBS:
         raise vs.Error('RealESRGAN: only RGBS format is supported')
 
-    if model_type < 0 or model_type > 4:
-        raise vs.Error('RealESRGAN: model_type must be 0, 1, 2, 3, or 4')
+    if model < 0 or model > 4:
+        raise vs.Error('RealESRGAN: model must be 0, 1, 2, 3, or 4')
 
     if osp.getsize(osp.join(dir_name, 'RealESRGAN_x2plus.onnx')) == 0:
         raise vs.Error("RealESRGAN: model files have not been downloaded. run 'python -m vsrealesrgan' first")
 
-    if model_type == 0:  # x2 RRDBNet model
+    if model == 0:  # x2 RRDBNet model
         model_name = 'RealESRGAN_x2plus.onnx'
         scale = 2
-    elif model_type == 1:  # x4 RRDBNet model
+    elif model == 1:  # x4 RRDBNet model
         model_name = 'RealESRGAN_x4plus.onnx'
         scale = 4
-    elif model_type == 2:  # x4 RRDBNet model with 6 blocks
+    elif model == 2:  # x4 RRDBNet model with 6 blocks
         model_name = 'RealESRGAN_x4plus_anime_6B.onnx'
         scale = 4
-    elif model_type == 3:  # x2 VGG-style model (XS size)
+    elif model == 3:  # x2 VGG-style model (XS size)
         model_name = 'RealESRGANv2-animevideo-xsx2.onnx'
         scale = 2
     else:  # x4 VGG-style model (XS size)
