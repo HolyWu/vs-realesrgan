@@ -32,8 +32,7 @@ def RealESRGAN(
             0 = RealESRGAN_x2plus (x2 model for general images)
             1 = RealESRGAN_x4plus (x4 model for general images)
             2 = RealESRGAN_x4plus_anime_6B (x4 model optimized for anime images)
-            3 = RealESRGANv2-animevideo-xsx2 (x2 model optimized for anime videos)
-            4 = RealESRGANv2-animevideo-xsx4 (x4 model optimized for anime videos)
+            3 = realesr-animevideov3 (x4 model optimized for anime videos)
 
         tile_w, tile_h: Tile width and height, respectively. As too large images result in the out of GPU memory issue, so this tile option will first crop
             input images into tiles, and then process each of them. Finally, they will be merged into one image. 0 denotes for do not use tile.
@@ -83,10 +82,10 @@ def RealESRGAN(
     if clip.format.id != vs.RGBS:
         raise vs.Error('RealESRGAN: only RGBS format is supported')
 
-    if model < 0 or model > 4:
-        raise vs.Error('RealESRGAN: model must be 0, 1, 2, 3, or 4')
+    if model < 0 or model > 3:
+        raise vs.Error('RealESRGAN: model must be 0, 1, 2, or 3')
 
-    if osp.getsize(osp.join(dir_name, 'RealESRGAN_x2plus.onnx')) == 0:
+    if osp.getsize(osp.join(dir_name, 'realesr-animevideov3.onnx')) == 0:
         raise vs.Error("RealESRGAN: model files have not been downloaded. run 'python -m vsrealesrgan' first")
 
     if model == 0:  # x2 RRDBNet model
@@ -98,11 +97,8 @@ def RealESRGAN(
     elif model == 2:  # x4 RRDBNet model with 6 blocks
         model_name = 'RealESRGAN_x4plus_anime_6B.onnx'
         scale = 4
-    elif model == 3:  # x2 VGG-style model (XS size)
-        model_name = 'RealESRGANv2-animevideo-xsx2.onnx'
-        scale = 2
     else:  # x4 VGG-style model (XS size)
-        model_name = 'RealESRGANv2-animevideo-xsx4.onnx'
+        model_name = 'realesr-animevideov3.onnx'
         scale = 4
 
     modulo = 2 if scale == 2 else 1
