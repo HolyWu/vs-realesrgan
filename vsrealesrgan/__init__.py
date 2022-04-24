@@ -10,7 +10,7 @@ dir_name = osp.dirname(__file__)
 
 def RealESRGAN(
     clip: vs.VideoNode,
-    model: int = 0,
+    model: int = 3,
     tile_w: int = 0,
     tile_h: int = 0,
     tile_pad: int = 10,
