@@ -4,16 +4,20 @@ Training Real-World Blind Super-Resolution with Pure Synthetic Data, based on ht
 
 ## Dependencies
 - [NumPy](https://numpy.org/install)
-- [ONNX Runtime](https://onnxruntime.ai/). CUDA and TensorRT require `onnxruntime-gpu`, while DirectML requires `onnxruntime-directml`. Note that only one of `onnxruntime`, `onnxruntime-gpu` and `onnxruntime-directml` should be installed at a time in any one environment.
-- [VapourSynth](http://www.vapoursynth.com/) R55 or newer.
-- (Optional) [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
-- (Optional) [cuDNN](https://developer.nvidia.com/cudnn)
-- (Optional) [TensorRT](https://developer.nvidia.com/tensorrt)
+- [PyTorch](https://pytorch.org/get-started) 1.13.0+
+- [VapourSynth](http://www.vapoursynth.com/) R55+
+
+`trt` requires additional runtime libraries:
+- [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
+- [cuDNN](https://developer.nvidia.com/cudnn)
+- [TensorRT](https://developer.nvidia.com/tensorrt)
+
+For ease of installation on Windows, you can download the CUDA 7z file on [Releases](https://github.com/HolyWu/vs-rife/releases) which contains required runtime libraries and Python wheel file. Either add the unzipped directory to your system `PATH` or copy the DLL files to a directory which is already in your system `PATH`. Finally pip install the Python wheel file.
 
 
 ## Installation
 ```
-pip install --upgrade vsrealesrgan
+pip install -U vsrealesrgan
 python -m vsrealesrgan
 ```
 
