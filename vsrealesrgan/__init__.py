@@ -18,7 +18,7 @@ from torch_tensorrt.fx.utils import LowerPrecision
 from .rrdbnet_arch import RRDBNet
 from .srvgg_arch import SRVGGNetCompact
 
-__version__ = '3.1.0'
+__version__ = '4.0.0'
 
 package_dir = os.path.dirname(os.path.realpath(__file__))
 
