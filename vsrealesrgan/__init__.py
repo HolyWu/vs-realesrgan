@@ -89,7 +89,7 @@ def RealESRGAN(
     if not isinstance(clip, vs.VideoNode):
         raise vs.Error('RealESRGAN: this is not a clip')
 
-    if clip.format.id not in [vs.RGBH, vs.RGBS]:
+    if clip.format.id not in (vs.RGBH, vs.RGBS):
         raise vs.Error('RealESRGAN: only RGBH and RGBS formats are supported')
 
     if not torch.cuda.is_available():
@@ -108,7 +108,7 @@ def RealESRGAN(
         if cuda_graphs:
             raise vs.Error('RealESRGAN: cuda_graphs and trt are mutually exclusive')
 
-    if model < 0 or model > 5:
+    if model not in range(6):
         raise vs.Error('RealESRGAN: model must be 0, 1, 2, 3, 4, or 5')
 
     if denoise_strength < 0 or denoise_strength > 1:
@@ -163,6 +163,7 @@ def RealESRGAN(
         elif 'params' in loadnet:
             loadnet = loadnet['params']
     else:
+        model_path = os.path.realpath(model_path)
         model_name = os.path.basename(model_path)
 
         loadnet = torch.load(model_path, map_location='cpu')
@@ -251,7 +252,7 @@ def RealESRGAN(
         dimensions = f'{pad_w}x{pad_h}'
         precision = 'fp16' if fp16 else 'fp32'
         trt_engine_path = os.path.join(
-            trt_cache_path,
+            os.path.realpath(trt_cache_path),
             (
                 f'{model_name}'
                 + f'_{device_name}'
