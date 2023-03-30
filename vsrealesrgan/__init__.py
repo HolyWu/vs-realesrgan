@@ -18,7 +18,7 @@ from torch_tensorrt.fx.utils import LowerPrecision
 from .rrdbnet_arch import RRDBNet
 from .srvgg_arch import SRVGGNetCompact
 
-__version__ = '4.0.1'
+__version__ = "4.0.1"
 
 package_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -87,43 +87,43 @@ def RealESRGAN(
     :param tile_pad:                Pad size for each tile, to remove border artifacts.
     """
     if not isinstance(clip, vs.VideoNode):
-        raise vs.Error('RealESRGAN: this is not a clip')
+        raise vs.Error("RealESRGAN: this is not a clip")
 
-    if clip.format.id not in (vs.RGBH, vs.RGBS):
-        raise vs.Error('RealESRGAN: only RGBH and RGBS formats are supported')
+    if clip.format.id not in [vs.RGBH, vs.RGBS]:
+        raise vs.Error("RealESRGAN: only RGBH and RGBS formats are supported")
 
     if not torch.cuda.is_available():
-        raise vs.Error('RealESRGAN: CUDA is not available')
+        raise vs.Error("RealESRGAN: CUDA is not available")
 
     if num_streams < 1:
-        raise vs.Error('RealESRGAN: num_streams must be at least 1')
+        raise vs.Error("RealESRGAN: num_streams must be at least 1")
 
     if num_streams > vs.core.num_threads:
-        raise vs.Error('RealESRGAN: setting num_streams greater than `core.num_threads` is useless')
+        raise vs.Error("RealESRGAN: setting num_streams greater than `core.num_threads` is useless")
 
     if trt:
         if nvfuser:
-            raise vs.Error('RealESRGAN: nvfuser and trt are mutually exclusive')
+            raise vs.Error("RealESRGAN: nvfuser and trt are mutually exclusive")
 
         if cuda_graphs:
-            raise vs.Error('RealESRGAN: cuda_graphs and trt are mutually exclusive')
+            raise vs.Error("RealESRGAN: cuda_graphs and trt are mutually exclusive")
 
     if model not in range(6):
-        raise vs.Error('RealESRGAN: model must be 0, 1, 2, 3, 4, or 5')
+        raise vs.Error("RealESRGAN: model must be 0, 1, 2, 3, 4, or 5")
 
     if denoise_strength < 0 or denoise_strength > 1:
-        raise vs.Error('RealESRGAN: denoise_strength must be between 0.0 and 1.0 (inclusive)')
+        raise vs.Error("RealESRGAN: denoise_strength must be between 0.0 and 1.0 (inclusive)")
 
-    if os.path.getsize(os.path.join(package_dir, 'ESRGAN_SRx4_DF2KOST_official-ff704c30.pth')) == 0:
+    if os.path.getsize(os.path.join(package_dir, "ESRGAN_SRx4_DF2KOST_official-ff704c30.pth")) == 0:
         raise vs.Error("RealESRGAN: model files have not been downloaded. run 'python -m vsrealesrgan' first")
+
+    torch.set_float32_matmul_precision("high")
 
     fp16 = clip.format.bits_per_sample == 16
     if fp16:
         torch.set_default_tensor_type(torch.HalfTensor)
 
-    torch.backends.cuda.matmul.allow_tf32 = True
-
-    device = torch.device('cuda', device_index)
+    device = torch.device("cuda", device_index)
 
     stream = [torch.cuda.Stream(device=device) for _ in range(num_streams)]
     stream_lock = [Lock() for _ in range(num_streams)]
@@ -131,53 +131,53 @@ def RealESRGAN(
     if model_path is None:
         match model:
             case 0:  # x4 RRDBNet model
-                model_name = 'ESRGAN_SRx4_DF2KOST_official-ff704c30.pth'
+                model_name = "ESRGAN_SRx4_DF2KOST_official-ff704c30.pth"
                 module = RRDBNet(3, 3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
                 scale = 4
             case 1:  # x2 RRDBNet model
-                model_name = 'RealESRGAN_x2plus.pth'
+                model_name = "RealESRGAN_x2plus.pth"
                 module = RRDBNet(3, 3, num_feat=64, num_block=23, num_grow_ch=32, scale=2)
                 scale = 2
             case 2:  # x4 RRDBNet model
-                model_name = 'RealESRGAN_x4plus.pth'
+                model_name = "RealESRGAN_x4plus.pth"
                 module = RRDBNet(3, 3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
                 scale = 4
             case 3:  # x4 RRDBNet model with 6 blocks
-                model_name = 'RealESRGAN_x4plus_anime_6B.pth'
+                model_name = "RealESRGAN_x4plus_anime_6B.pth"
                 module = RRDBNet(3, 3, num_feat=64, num_block=6, num_grow_ch=32, scale=4)
                 scale = 4
             case 4:  # x4 VGG-style model (XS size)
-                model_name = 'realesr-animevideov3.pth'
-                module = SRVGGNetCompact(3, 3, num_feat=64, num_conv=16, upscale=4, act_type='prelu')
+                model_name = "realesr-animevideov3.pth"
+                module = SRVGGNetCompact(3, 3, num_feat=64, num_conv=16, upscale=4, act_type="prelu")
                 scale = 4
             case 5:  # x4 VGG-style model (S size)
-                model_name = 'realesr-general-x4v3.pth'
-                module = SRVGGNetCompact(3, 3, num_feat=64, num_conv=32, upscale=4, act_type='prelu')
+                model_name = "realesr-general-x4v3.pth"
+                module = SRVGGNetCompact(3, 3, num_feat=64, num_conv=32, upscale=4, act_type="prelu")
                 scale = 4
 
         model_path = os.path.join(package_dir, model_name)
 
-        loadnet = torch.load(model_path, map_location='cpu')
-        if 'params_ema' in loadnet:
-            loadnet = loadnet['params_ema']
-        elif 'params' in loadnet:
-            loadnet = loadnet['params']
+        loadnet = torch.load(model_path, map_location="cpu")
+        if "params_ema" in loadnet:
+            loadnet = loadnet["params_ema"]
+        elif "params" in loadnet:
+            loadnet = loadnet["params"]
     else:
         model_path = os.path.realpath(model_path)
         model_name = os.path.basename(model_path)
 
-        loadnet = torch.load(model_path, map_location='cpu')
-        if 'params_ema' in loadnet:
-            loadnet = loadnet['params_ema']
-        elif 'params' in loadnet:
-            loadnet = loadnet['params']
+        loadnet = torch.load(model_path, map_location="cpu")
+        if "params_ema" in loadnet:
+            loadnet = loadnet["params_ema"]
+        elif "params" in loadnet:
+            loadnet = loadnet["params"]
 
-        if 'conv_first.weight' in loadnet:
-            num_feat = loadnet['conv_first.weight'].shape[0]
-            num_block = int(list(loadnet)[-11].split('.')[1]) + 1
-            num_grow_ch = loadnet['body.0.rdb1.conv1.weight'].shape[0]
+        if "conv_first.weight" in loadnet:
+            num_feat = loadnet["conv_first.weight"].shape[0]
+            num_block = int(list(loadnet)[-11].split(".")[1]) + 1
+            num_grow_ch = loadnet["body.0.rdb1.conv1.weight"].shape[0]
 
-            match loadnet['conv_first.weight'].shape[1]:
+            match loadnet["conv_first.weight"].shape[1]:
                 case 48:
                     scale = 1
                 case 12:
@@ -187,29 +187,26 @@ def RealESRGAN(
 
             module = RRDBNet(3, 3, num_feat=num_feat, num_block=num_block, num_grow_ch=num_grow_ch, scale=scale)
         else:
-            num_feat = loadnet['body.0.weight'].shape[0]
-            num_conv = int(list(loadnet)[-1].split('.')[1]) // 2 - 1
+            num_feat = loadnet["body.0.weight"].shape[0]
+            num_conv = int(list(loadnet)[-1].split(".")[1]) // 2 - 1
             scale = math.isqrt(loadnet[list(loadnet)[-1]].shape[0] // 3)
-            module = SRVGGNetCompact(3, 3, num_feat=num_feat, num_conv=num_conv, upscale=scale, act_type='prelu')
+            module = SRVGGNetCompact(3, 3, num_feat=num_feat, num_conv=num_conv, upscale=scale, act_type="prelu")
 
     if model == 5 and denoise_strength != 1:
-        wdn_model_path = model_path.replace('realesr-general-x4v3', 'realesr-general-wdn-x4v3')
+        wdn_model_path = model_path.replace("realesr-general-x4v3", "realesr-general-wdn-x4v3")
         dni_weight = [denoise_strength, 1 - denoise_strength]
 
-        net_b = torch.load(wdn_model_path, map_location='cpu')
-        if 'params_ema' in net_b:
-            net_b = net_b['params_ema']
-        elif 'params' in net_b:
-            net_b = net_b['params']
+        net_b = torch.load(wdn_model_path, map_location="cpu")
+        if "params_ema" in net_b:
+            net_b = net_b["params_ema"]
+        elif "params" in net_b:
+            net_b = net_b["params"]
 
         for k, v in loadnet.items():
             loadnet[k] = dni_weight[0] * v + dni_weight[1] * net_b[k]
 
     module.load_state_dict(loadnet)
     module.eval().to(device, memory_format=torch.channels_last)
-
-    if nvfuser:
-        module = memory_efficient_fusion(module)
 
     match scale:
         case 1:
@@ -220,11 +217,14 @@ def RealESRGAN(
             modulo = 1
 
     if tile_w > 0 and tile_h > 0:
-        pad_w = ((min(tile_w + 2 * tile_pad, clip.width) - 1) // modulo + 1) * modulo
-        pad_h = ((min(tile_h + 2 * tile_pad, clip.height) - 1) // modulo + 1) * modulo
+        pad_w = math.ceil(min(tile_w + 2 * tile_pad, clip.width) / modulo) * modulo
+        pad_h = math.ceil(min(tile_h + 2 * tile_pad, clip.height) / modulo) * modulo
     else:
-        pad_w = ((clip.width - 1) // modulo + 1) * modulo
-        pad_h = ((clip.height - 1) // modulo + 1) * modulo
+        pad_w = math.ceil(clip.width / modulo) * modulo
+        pad_h = math.ceil(clip.height / modulo) * modulo
+
+    if nvfuser:
+        module = memory_efficient_fusion(module)
 
     if cuda_graphs:
         graph: list[torch.cuda.CUDAGraph] = []
@@ -232,7 +232,7 @@ def RealESRGAN(
         static_output: list[torch.Tensor] = []
 
         for i in range(num_streams):
-            static_input.append(torch.empty(1, 3, pad_h, pad_w, device=device, memory_format=torch.channels_last))
+            static_input.append(torch.zeros((1, 3, pad_h, pad_w), device=device).to(memory_format=torch.channels_last))
 
             torch.cuda.synchronize(device=device)
             stream[i].wait_stream(torch.cuda.current_stream(device=device))
@@ -249,19 +249,19 @@ def RealESRGAN(
     elif trt:
         device_name = torch.cuda.get_device_name(device)
         trt_version = tensorrt.__version__
-        dimensions = f'{pad_w}x{pad_h}'
-        precision = 'fp16' if fp16 else 'fp32'
+        dimensions = f"{pad_w}x{pad_h}"
+        precision = "fp16" if fp16 else "fp32"
         trt_engine_path = os.path.join(
             os.path.realpath(trt_cache_path),
             (
-                f'{model_name}'
-                + f'_{device_name}'
-                + f'_trt-{trt_version}'
-                + f'_{dimensions}'
-                + f'_{precision}'
-                + f'_workspace-{trt_max_workspace_size}'
-                + (f'_denoise-{denoise_strength}' if model == 5 else '')
-                + '.pt'
+                f"{model_name}"
+                + f"_{device_name}"
+                + f"_trt-{trt_version}"
+                + f"_{dimensions}"
+                + f"_{precision}"
+                + f"_workspace-{trt_max_workspace_size}"
+                + (f"_denoise-{denoise_strength}" if model == 5 else "")
+                + ".pt"
             ),
         )
 
@@ -276,7 +276,7 @@ def RealESRGAN(
             )
             lowerer = Lowerer.create(lower_setting=lower_setting)
             module = lowerer(
-                module, [torch.empty(1, 3, pad_h, pad_w, device=device, memory_format=torch.channels_last)]
+                module, [torch.zeros((1, 3, pad_h, pad_w), device=device).to(memory_format=torch.channels_last)]
             )
             torch.save(module, trt_engine_path)
 
@@ -298,13 +298,13 @@ def RealESRGAN(
             local_index = index
 
         with stream_lock[local_index], torch.cuda.stream(stream[local_index]):
-            img = frame_to_tensor(f[0]).to(device, memory_format=torch.channels_last)
+            img = frame_to_tensor(f[0], device)
 
             if tile_w > 0 and tile_h > 0:
                 output = tile_process(img, scale, tile_w, tile_h, tile_pad, pad_w, pad_h, backend, local_index)
             else:
                 h, w = img.shape[2:]
-                img = F.pad(img, (0, pad_w - w, 0, pad_h - h), 'reflect')
+                img = F.pad(img, (0, pad_w - w, 0, pad_h - h), "reflect")
 
                 if cuda_graphs:
                     static_input[local_index].copy_(img)
@@ -325,9 +325,9 @@ def RealESRGAN(
     )
 
 
-def frame_to_tensor(frame: vs.VideoFrame) -> torch.Tensor:
+def frame_to_tensor(frame: vs.VideoFrame, device: torch.device) -> torch.Tensor:
     array = np.stack([np.asarray(frame[plane]) for plane in range(frame.format.num_planes)])
-    return torch.from_numpy(array).unsqueeze(0)
+    return torch.from_numpy(array).unsqueeze(0).to(device, memory_format=torch.channels_last).clamp(0.0, 1.0)
 
 
 def tensor_to_frame(tensor: torch.Tensor, frame: vs.VideoFrame) -> vs.VideoFrame:
@@ -383,7 +383,8 @@ def tile_process(
             input_tile = img[:, :, input_start_y_pad:input_end_y_pad, input_start_x_pad:input_end_x_pad]
 
             h, w = input_tile.shape[2:]
-            input_tile = F.pad(input_tile, (0, pad_w - w, 0, pad_h - h), 'reflect')
+            mode = "reflect" if pad_w - w < w and pad_h - h < h else "replicate"
+            input_tile = F.pad(input_tile, (0, pad_w - w, 0, pad_h - h), mode)
 
             # process tile
             if isinstance(backend, Backend.CUDAGraphs):
