@@ -20,7 +20,7 @@ from .srvgg_arch import SRVGGNetCompact
 
 __version__ = "4.0.1"
 
-package_dir = os.path.dirname(os.path.realpath(__file__))
+model_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
 
 class Backend:
@@ -48,7 +48,7 @@ def RealESRGAN(
     cuda_graphs: bool = False,
     trt: bool = False,
     trt_max_workspace_size: int = 1 << 30,
-    trt_cache_path: str = package_dir,
+    trt_cache_path: str = model_dir,
     model: int = 4,
     model_path: str | None = None,
     denoise_strength: float = 0.5,
@@ -114,7 +114,7 @@ def RealESRGAN(
     if denoise_strength < 0 or denoise_strength > 1:
         raise vs.Error("RealESRGAN: denoise_strength must be between 0.0 and 1.0 (inclusive)")
 
-    if os.path.getsize(os.path.join(package_dir, "ESRGAN_SRx4_DF2KOST_official-ff704c30.pth")) == 0:
+    if os.path.getsize(os.path.join(model_dir, "ESRGAN_SRx4_DF2KOST_official-ff704c30.pth")) == 0:
         raise vs.Error("RealESRGAN: model files have not been downloaded. run 'python -m vsrealesrgan' first")
 
     torch.set_float32_matmul_precision("high")
@@ -155,7 +155,7 @@ def RealESRGAN(
                 module = SRVGGNetCompact(3, 3, num_feat=64, num_conv=32, upscale=4, act_type="prelu")
                 scale = 4
 
-        model_path = os.path.join(package_dir, model_name)
+        model_path = os.path.join(model_dir, model_name)
 
         loadnet = torch.load(model_path, map_location="cpu")
         if "params_ema" in loadnet:
