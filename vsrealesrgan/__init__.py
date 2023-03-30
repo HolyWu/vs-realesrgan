@@ -40,7 +40,7 @@ class Backend:
 
 
 @torch.inference_mode()
-def RealESRGAN(
+def realesrgan(
     clip: vs.VideoNode,
     device_index: int | None = None,
     num_streams: int = 1,
@@ -87,35 +87,35 @@ def RealESRGAN(
     :param tile_pad:                Pad size for each tile, to remove border artifacts.
     """
     if not isinstance(clip, vs.VideoNode):
-        raise vs.Error("RealESRGAN: this is not a clip")
+        raise vs.Error("realesrgan: this is not a clip")
 
     if clip.format.id not in [vs.RGBH, vs.RGBS]:
-        raise vs.Error("RealESRGAN: only RGBH and RGBS formats are supported")
+        raise vs.Error("realesrgan: only RGBH and RGBS formats are supported")
 
     if not torch.cuda.is_available():
-        raise vs.Error("RealESRGAN: CUDA is not available")
+        raise vs.Error("realesrgan: CUDA is not available")
 
     if num_streams < 1:
-        raise vs.Error("RealESRGAN: num_streams must be at least 1")
+        raise vs.Error("realesrgan: num_streams must be at least 1")
 
     if num_streams > vs.core.num_threads:
-        raise vs.Error("RealESRGAN: setting num_streams greater than `core.num_threads` is useless")
+        raise vs.Error("realesrgan: setting num_streams greater than `core.num_threads` is useless")
 
     if trt:
         if nvfuser:
-            raise vs.Error("RealESRGAN: nvfuser and trt are mutually exclusive")
+            raise vs.Error("realesrgan: nvfuser and trt are mutually exclusive")
 
         if cuda_graphs:
-            raise vs.Error("RealESRGAN: cuda_graphs and trt are mutually exclusive")
+            raise vs.Error("realesrgan: cuda_graphs and trt are mutually exclusive")
 
     if model not in range(6):
-        raise vs.Error("RealESRGAN: model must be 0, 1, 2, 3, 4, or 5")
+        raise vs.Error("realesrgan: model must be 0, 1, 2, 3, 4, or 5")
 
     if denoise_strength < 0 or denoise_strength > 1:
-        raise vs.Error("RealESRGAN: denoise_strength must be between 0.0 and 1.0 (inclusive)")
+        raise vs.Error("realesrgan: denoise_strength must be between 0.0 and 1.0 (inclusive)")
 
     if os.path.getsize(os.path.join(model_dir, "ESRGAN_SRx4_DF2KOST_official-ff704c30.pth")) == 0:
-        raise vs.Error("RealESRGAN: model files have not been downloaded. run 'python -m vsrealesrgan' first")
+        raise vs.Error("realesrgan: model files have not been downloaded. run 'python -m vsrealesrgan' first")
 
     torch.set_float32_matmul_precision("high")
 

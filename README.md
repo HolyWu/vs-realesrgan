@@ -24,9 +24,9 @@ python -m vsrealesrgan
 
 ## Usage
 ```python
-from vsrealesrgan import RealESRGAN
+from vsrealesrgan import realesrgan
 
-ret = RealESRGAN(clip)
+ret = realesrgan(clip)
 ```
 
 See `__init__.py` for the description of the parameters.
