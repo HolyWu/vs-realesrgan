@@ -20,6 +20,8 @@ from .srvgg_arch import SRVGGNetCompact
 
 __version__ = "4.1.0"
 
+os.environ["CUDA_MODULE_LOADING"] = "LAZY"
+
 model_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
 
