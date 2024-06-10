@@ -24,13 +24,21 @@ def download_model(url: str) -> None:
 if __name__ == "__main__":
     url = "https://github.com/HolyWu/vs-realesrgan/releases/download/model/"
     models = [
-        "ESRGAN_SRx4_DF2KOST_official-ff704c30",
-        "realesr-animevideov3",
+        "Ani4Kv2_Compact_2x",
+        "Ani4Kv2_UltraCompact_2x",
+        "AnimeJaNai_HD_V3_Compact_2x",
+        "AnimeJaNai_HD_V3_SuperUltraCompact_2x",
+        "AnimeJaNai_HD_V3_UltraCompact_2x",
+        "AniScale2_Compact_2x",
+        "AniScale2_Refiner_1x",
+        "ESRGAN_SRx4",
+        "OpenProteus_Compact_2x",
+        "realesr_animevideov3",
+        "realesr_general_wdn_x4v3",
+        "realesr_general_x4v3",
         "RealESRGAN_x2plus",
         "RealESRGAN_x4plus",
         "RealESRGAN_x4plus_anime_6B",
-        "realesr-general-wdn-x4v3",
-        "realesr-general-x4v3",
     ]
     for model in models:
         download_model(url + model + ".pth")

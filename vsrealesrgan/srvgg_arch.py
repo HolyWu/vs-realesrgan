@@ -1,16 +1,5 @@
-import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.nn.parameter import Parameter
-
-
-class MyPReLU(nn.Module):
-    def __init__(self, num_parameters=1, init=0.25):
-        super(MyPReLU, self).__init__()
-        self.weight = Parameter(torch.empty(num_parameters).fill_(init))
-
-    def forward(self, input):
-        return F.relu(input) - self.weight.reshape(1, -1, 1, 1) * F.relu(-input)
 
 
 class SRVGGNetCompact(nn.Module):
@@ -44,7 +33,7 @@ class SRVGGNetCompact(nn.Module):
         if act_type == 'relu':
             activation = nn.ReLU(inplace=True)
         elif act_type == 'prelu':
-            activation = MyPReLU(num_parameters=num_feat)
+            activation = nn.PReLU(num_parameters=num_feat)
         elif act_type == 'leakyrelu':
             activation = nn.LeakyReLU(negative_slope=0.1, inplace=True)
         self.body.append(activation)
@@ -56,7 +45,7 @@ class SRVGGNetCompact(nn.Module):
             if act_type == 'relu':
                 activation = nn.ReLU(inplace=True)
             elif act_type == 'prelu':
-                activation = MyPReLU(num_parameters=num_feat)
+                activation = nn.PReLU(num_parameters=num_feat)
             elif act_type == 'leakyrelu':
                 activation = nn.LeakyReLU(negative_slope=0.1, inplace=True)
             self.body.append(activation)

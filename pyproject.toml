@@ -8,25 +8,31 @@ version = "4.1.0"
 description = "Real-ESRGAN function for VapourSynth"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE"}
-authors = [{name = "HolyWu", email = "holywu@gmail.com"}]
-keywords = ["Real-ESRGAN", "VapourSynth"]
+license-files = { paths = ["LICENSE"] }
+authors = [
+  { name = "HolyWu", email = "holywu@gmail.com" },
+]
+keywords = [
+  "PyTorch",
+  "Real-ESRGAN",
+  "TensorRT",
+  "VapourSynth",
+]
 classifiers = [
-  "License :: OSI Approved :: MIT License",
+  "Environment :: GPU :: NVIDIA CUDA",
+  "License :: OSI Approved :: BSD License",
   "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3.10",
-  "Topic :: Multimedia :: Video"
+  "Programming Language :: Python :: 3",
+  "Topic :: Multimedia :: Video",
 ]
 dependencies = [
-  "numpy>=1.24.2",
-  "requests>=2.28.2",
-  "tensorrt>=8.5.3.1",
-  "torch>=1.13.1",
-  "torch-tensorrt-fx-only>=1.3.0",
-  "tqdm>=4.65.0",
-  "VapourSynth>=55"
+  "numpy",
+  "requests",
+  "torch>=2.4.0.dev",
+  "tqdm",
+  "VapourSynth>=66",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/HolyWu/vs-realesrgan"
-"Bug Tracker" = "https://github.com/HolyWu/vs-realesrgan/issues"
+Homepage = "https://github.com/HolyWu/vs-realesrgan"
+Issues = "https://github.com/HolyWu/vs-realesrgan/issues"
