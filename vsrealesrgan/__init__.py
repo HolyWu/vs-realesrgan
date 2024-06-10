@@ -15,7 +15,7 @@ import vapoursynth as vs
 from .rrdbnet_arch import RRDBNet
 from .srvgg_arch import SRVGGNetCompact
 
-__version__ = "4.1.0"
+__version__ = "5.0.0"
 
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 
