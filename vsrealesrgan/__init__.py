@@ -144,7 +144,7 @@ def realesrgan(
         model_path = os.path.realpath(model_path)
         model_name = os.path.basename(model_path)
 
-    state_dict = torch.load(model_path, map_location=device)
+    state_dict = torch.load(model_path, map_location=device, weights_only=True)
     if "params_ema" in state_dict:
         state_dict = state_dict["params_ema"]
     elif "params" in state_dict:
@@ -154,7 +154,7 @@ def realesrgan(
         wdn_model_path = model_path.replace("realesr_general_x4v3", "realesr_general_wdn_x4v3")
         dni_weight = [denoise_strength, 1 - denoise_strength]
 
-        net_b = torch.load(wdn_model_path, map_location=device)
+        net_b = torch.load(wdn_model_path, map_location=device, weights_only=True)
         if "params_ema" in net_b:
             net_b = net_b["params_ema"]
         elif "params" in net_b:
@@ -199,7 +199,7 @@ def realesrgan(
         case _:
             modulo = 1
 
-    if all([t > 0 for t in tile]):
+    if all(t > 0 for t in tile):
         pad_w = math.ceil(min(tile[0] + 2 * tile_pad, clip.width) / modulo) * modulo
         pad_h = math.ceil(min(tile[1] + 2 * tile_pad, clip.height) / modulo) * modulo
     else:
@@ -284,7 +284,7 @@ def realesrgan(
         with stream_lock[local_index], torch.cuda.stream(stream[local_index]):
             img = frame_to_tensor(f[0], device).unsqueeze(0)
 
-            if all([t > 0 for t in tile]):
+            if all(t > 0 for t in tile):
                 output = tile_process(img, scale, tile, tile_pad, pad_w, pad_h, backend, local_index)
             else:
                 h, w = img.shape[2:]
