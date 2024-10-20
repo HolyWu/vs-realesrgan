@@ -1,5 +1,9 @@
 from torch import nn
-from torch.nn import functional as F
+
+try:
+    from .interpolate import interpolate
+except ImportError:
+    from torch.nn.functional import interpolate
 
 
 class SRVGGNetCompact(nn.Module):
@@ -62,6 +66,6 @@ class SRVGGNetCompact(nn.Module):
 
         out = self.upsampler(out)
         # add the nearest upsampled image, so that the network learns the residual
-        base = F.interpolate(x, scale_factor=self.upscale, mode='nearest')
+        base = interpolate(x, scale_factor=self.upscale, mode='nearest')
         out += base
         return out

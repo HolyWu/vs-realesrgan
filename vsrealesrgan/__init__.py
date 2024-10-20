@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import os
+import sys
 import warnings
 from dataclasses import dataclass
 from enum import IntEnum
@@ -17,16 +18,15 @@ from .srvgg_arch import SRVGGNetCompact
 
 __version__ = "5.0.0"
 
+os.environ["CI_BUILD"] = "1"
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
-
-warnings.filterwarnings("ignore", "The given NumPy array is not writable")
 
 model_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
 
 class Backend:
     @dataclass
-    class Eager:
+    class Torch:
         module: torch.nn.Module
 
     @dataclass
@@ -64,20 +64,23 @@ def realesrgan(
     tile: list[int] = [0, 0],
     tile_pad: int = 8,
     trt: bool = False,
+    trt_static_shape: bool = True,
+    trt_min_shape: list[int] = [128, 128],
+    trt_opt_shape: list[int] = [720, 480],
+    trt_max_shape: list[int] = [1920, 1080],
     trt_debug: bool = False,
     trt_workspace_size: int = 0,
-    trt_int8: bool = False,
-    trt_int8_sample_step: int = 72,
-    trt_int8_batch_size: int = 1,
+    trt_max_aux_streams: int | None = None,
+    trt_optimization_level: int | None = None,
     trt_cache_dir: str = model_dir,
 ) -> vs.VideoNode:
     """Training Real-World Blind Super-Resolution with Pure Synthetic Data
 
-    :param clip:                    Clip to process. Only RGBH and RGBS formats are supported. RGBH performs inference
-                                    in FP16 mode while RGBS performs inference in FP32 mode, except `trt_int8=True`.
+    :param clip:                    Clip to process. Only RGBH and RGBS formats are supported.
+                                    RGBH performs inference in FP16 mode while RGBS performs inference in FP32 mode.
     :param device_index:            Device ordinal of the GPU.
     :param num_streams:             Number of CUDA streams to enqueue the kernels.
-    :param model:                   Model to use.
+    :param model:                   Model to use. Ignored if model_path is specified.
     :param model_path:              Path to custom model file.
     :param denoise_strength:        Denoise strength for realesr-general-x4v3 model.
                                     0 for weak denoise (keep noise), 1 for strong denoise ability.
@@ -86,13 +89,19 @@ def realesrgan(
                                     them. Finally, they will be merged into one image. 0 denotes for do not use tile.
     :param tile_pad:                Pad size for each tile, to remove border artifacts.
     :param trt:                     Use TensorRT for high-performance inference.
+    :param trt_static_shape:        Build with static or dynamic shapes.
+    :param trt_min_shape:           Min size of dynamic shapes. Ignored if trt_static_shape=True.
+    :param trt_opt_shape:           Opt size of dynamic shapes. Ignored if trt_static_shape=True.
+    :param trt_max_shape:           Max size of dynamic shapes. Ignored if trt_static_shape=True.
     :param trt_debug:               Print out verbose debugging information.
     :param trt_workspace_size:      Size constraints of workspace memory pool.
-    :param trt_int8:                Perform inference in INT8 mode using Post Training Quantization (PTQ). Calibration
-                                    datasets are sampled from input clip while building the engine.
-    :param trt_int8_sample_step:    Interval between sampled frames.
-    :param trt_int8_batch_size:     How many samples per batch to load. Calibrate with as large a single batch as
-                                    possible. Batch size can affect truncation error and may impact the final result.
+    :param trt_max_aux_streams:     Maximum number of auxiliary streams per inference stream that TRT is allowed to use
+                                    to run kernels in parallel if the network contains ops that can run in parallel,
+                                    with the cost of more memory usage. Set this to 0 for optimal memory usage.
+                                    (default = using heuristics)
+    :param trt_optimization_level:  Builder optimization level. Higher level allows TensorRT to spend more building time
+                                    for more optimization options. Valid values include integers from 0 to the maximum
+                                    optimization level, which is currently 5. (default is 3)
     :param trt_cache_dir:           Directory for TensorRT engine file. Engine will be cached when it's built for the
                                     first time. Note each engine is created for specific settings such as model
                                     path/name, precision, workspace etc, and specific GPUs and it's not portable.
@@ -118,11 +127,27 @@ def realesrgan(
     if not isinstance(tile, list) or len(tile) != 2:
         raise vs.Error("realesrgan: tile must be a list with 2 items")
 
-    if trt and trt_int8 and clip.format.bits_per_sample != 32:
-        raise vs.Error("realesrgan: INT8 mode only supports RGBS format")
+    if not trt_static_shape:
+        if not isinstance(trt_min_shape, list) or len(trt_min_shape) != 2:
+            raise vs.Error("realesrgan: trt_min_shape must be a list with 2 items")
 
-    if trt_int8_sample_step < 1:
-        raise vs.Error("realesrgan: trt_int8_sample_step must be at least 1")
+        if any(trt_min_shape[i] < 1 for i in range(2)):
+            raise vs.Error("realesrgan: trt_min_shape must be at least 1")
+
+        if not isinstance(trt_opt_shape, list) or len(trt_opt_shape) != 2:
+            raise vs.Error("realesrgan: trt_opt_shape must be a list with 2 items")
+
+        if any(trt_opt_shape[i] < 1 for i in range(2)):
+            raise vs.Error("realesrgan: trt_opt_shape must be at least 1")
+
+        if not isinstance(trt_max_shape, list) or len(trt_max_shape) != 2:
+            raise vs.Error("realesrgan: trt_max_shape must be a list with 2 items")
+
+        if any(trt_max_shape[i] < 1 for i in range(2)):
+            raise vs.Error("realesrgan: trt_max_shape must be at least 1")
+
+        if any(trt_min_shape[i] >= trt_max_shape[i] for i in range(2)):
+            raise vs.Error("realesrgan: trt_min_shape must be less than trt_max_shape")
 
     if os.path.getsize(os.path.join(model_dir, "Ani4Kv2_Compact_2x.pth")) == 0:
         raise vs.Error("realesrgan: model files have not been downloaded. run 'python -m vsrealesrgan' first")
@@ -149,7 +174,7 @@ def realesrgan(
         model_path = os.path.realpath(model_path)
         model_name = os.path.basename(model_path)
 
-    state_dict = torch.load(model_path, map_location=device, weights_only=True)
+    state_dict = torch.load(model_path, map_location="cpu", weights_only=True)
     if "params_ema" in state_dict:
         state_dict = state_dict["params_ema"]
     elif "params" in state_dict:
@@ -159,7 +184,7 @@ def realesrgan(
         wdn_model_path = model_path.replace("realesr_general_x4v3", "realesr_general_wdn_x4v3")
         dni_weight = [denoise_strength, 1 - denoise_strength]
 
-        net_b = torch.load(wdn_model_path, map_location=device, weights_only=True)
+        net_b = torch.load(wdn_model_path, map_location="cpu", weights_only=True)
         if "params_ema" in net_b:
             net_b = net_b["params_ema"]
         elif "params" in net_b:
@@ -192,9 +217,7 @@ def realesrgan(
             module = SRVGGNetCompact(3, 3, num_feat=num_feat, num_conv=num_conv, upscale=scale, act_type="prelu")
 
     module.load_state_dict(state_dict, assign=True)
-    module.eval().to(device)
-    if fp16:
-        module.half()
+    module.eval().to(device, dtype)
 
     match scale:
         case 1:
@@ -214,67 +237,91 @@ def realesrgan(
     if trt:
         import tensorrt
         import torch_tensorrt
-        import torch_tensorrt.ts.logging as logging
-        from torch.utils.data import DataLoader, Dataset
-        from torch_tensorrt.ts.ptq import DataLoaderCalibrator
 
-        class MyDataset(Dataset):
-            def __init__(self, clip: vs.VideoNode, device: torch.device) -> None:
-                super().__init__()
-                self.clip = clip
-                self.device = device
+        if trt_static_shape:
+            dimensions = f"{pad_w}x{pad_h}"
+        else:
+            for i in range(2):
+                trt_min_shape[i] = math.ceil(trt_min_shape[i] / modulo) * modulo
+                trt_opt_shape[i] = math.ceil(trt_opt_shape[i] / modulo) * modulo
+                trt_max_shape[i] = math.ceil(trt_max_shape[i] / modulo) * modulo
 
-            def __getitem__(self, index: int) -> torch.Tensor:
-                with self.clip.get_frame(index * trt_int8_sample_step) as f:
-                    return frame_to_tensor(f, self.device)
-
-            def __len__(self) -> int:
-                return math.ceil(self.clip.num_frames / trt_int8_sample_step)
-
-        logging.set_reportable_log_level(logging.Level.Debug if trt_debug else logging.Level.Info)
-        logging.set_is_colored_output_on(True)
+            dimensions = (
+                f"min-{trt_min_shape[0]}x{trt_min_shape[1]}"
+                f"_opt-{trt_opt_shape[0]}x{trt_opt_shape[1]}"
+                f"_max-{trt_max_shape[0]}x{trt_max_shape[1]}"
+            )
 
         trt_engine_path = os.path.join(
             os.path.realpath(trt_cache_dir),
             (
                 f"{model_name}"
-                + f"_{pad_w}x{pad_h}"
-                + f"_{'int8' if trt_int8 else 'fp16' if fp16 else 'fp32'}"
+                + f"_{dimensions}"
+                + f"_{'fp16' if fp16 else 'fp32'}"
                 + (f"_denoise-{denoise_strength}" if model == RealESRGANModel.realesr_general_x4v3 else "")
                 + f"_{torch.cuda.get_device_name(device)}"
                 + f"_trt-{tensorrt.__version__}"
                 + (f"_workspace-{trt_workspace_size}" if trt_workspace_size > 0 else "")
+                + (f"_aux-{trt_max_aux_streams}" if trt_max_aux_streams is not None else "")
+                + (f"_level-{trt_optimization_level}" if trt_optimization_level is not None else "")
                 + ".ts"
             ),
         )
 
         if not os.path.isfile(trt_engine_path):
-            inputs = [torch.zeros((1, 3, pad_h, pad_w), dtype=dtype, device=device)]
-            module = torch.jit.trace(module, inputs)
+            if sys.stdout is None:
+                sys.stdout = open(os.devnull, "w")
 
-            if trt_int8:
-                dataset = MyDataset(clip, device)
-                dataloader = DataLoader(dataset, batch_size=trt_int8_batch_size)
-                calibrator = DataLoaderCalibrator(dataloader, device=device)
+            example_inputs = (torch.zeros([1, 3, pad_h, pad_w], dtype=dtype, device=device),)
 
-            module = torch_tensorrt.compile(
-                module,
-                ir="ts",
-                inputs=inputs,
-                enabled_precisions={torch.half, torch.int8} if trt_int8 else {dtype},
-                device=torch_tensorrt.Device(gpu_id=device_index),
+            if trt_static_shape:
+                dynamic_shapes = None
+
+                inputs = [torch_tensorrt.Input(shape=[1, 3, pad_h, pad_w], dtype=dtype)]
+            else:
+                trt_min_shape.reverse()
+                trt_opt_shape.reverse()
+                trt_max_shape.reverse()
+
+                _height = torch.export.Dim("height", min=trt_min_shape[0] // modulo, max=trt_max_shape[0] // modulo)
+                _width = torch.export.Dim("width", min=trt_min_shape[1] // modulo, max=trt_max_shape[1] // modulo)
+                dim_height = _height * modulo
+                dim_width = _width * modulo
+                dynamic_shapes = {"x": {2: dim_height, 3: dim_width}}
+
+                inputs = [
+                    torch_tensorrt.Input(
+                        min_shape=[1, 3] + trt_min_shape,
+                        opt_shape=[1, 3] + trt_opt_shape,
+                        max_shape=[1, 3] + trt_max_shape,
+                        dtype=dtype,
+                        name="x",
+                    )
+                ]
+
+            exported_program = torch.export.export(module, example_inputs, dynamic_shapes=dynamic_shapes)
+
+            module = torch_tensorrt.dynamo.compile(
+                exported_program,
+                inputs,
+                device=device,
+                enabled_precisions={dtype},
+                debug=trt_debug,
+                num_avg_timing_iters=4,
                 workspace_size=trt_workspace_size,
-                calibrator=calibrator if trt_int8 else None,
-                truncate_long_and_double=True,
                 min_block_size=1,
+                max_aux_streams=trt_max_aux_streams,
+                optimization_level=trt_optimization_level,
             )
 
-            torch.jit.save(module, trt_engine_path)
+            torch_tensorrt.save(module, trt_engine_path, output_format="torchscript", inputs=example_inputs)
 
-        module = [torch.jit.load(trt_engine_path) for _ in range(num_streams)]
+        module = [torch.jit.load(trt_engine_path).eval() for _ in range(num_streams)]
         backend = Backend.TensorRT(module)
     else:
-        backend = Backend.Eager(module)
+        backend = Backend.Torch(module)
+
+    warnings.filterwarnings("ignore", "The given NumPy array is not writable")
 
     index = -1
     index_lock = Lock()
@@ -343,7 +390,7 @@ def tile_process(
     tile_pad: int,
     pad_w: int,
     pad_h: int,
-    backend: Backend.Eager | Backend.TensorRT,
+    backend: Backend.Torch | Backend.TensorRT,
     index: int,
 ) -> torch.Tensor:
     batch, channel, height, width = img.shape

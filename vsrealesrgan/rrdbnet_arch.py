@@ -1,8 +1,13 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
+from torch.nn.functional import pixel_unshuffle
 
-from .arch_util import default_init_weights, make_layer, pixel_unshuffle
+from .arch_util import default_init_weights, make_layer
+
+try:
+    from .interpolate import interpolate
+except ImportError:
+    from torch.nn.functional import interpolate
 
 
 class ResidualDenseBlock(nn.Module):
@@ -102,16 +107,16 @@ class RRDBNet(nn.Module):
 
     def forward(self, x):
         if self.scale == 2:
-            feat = pixel_unshuffle(x, scale=2)
+            feat = pixel_unshuffle(x, 2)
         elif self.scale == 1:
-            feat = pixel_unshuffle(x, scale=4)
+            feat = pixel_unshuffle(x, 4)
         else:
             feat = x
         feat = self.conv_first(feat)
         body_feat = self.conv_body(self.body(feat))
         feat = feat + body_feat
         # upsample
-        feat = self.lrelu(self.conv_up1(F.interpolate(feat, scale_factor=2, mode='nearest')))
-        feat = self.lrelu(self.conv_up2(F.interpolate(feat, scale_factor=2, mode='nearest')))
+        feat = self.lrelu(self.conv_up1(interpolate(feat, scale_factor=2, mode='nearest')))
+        feat = self.lrelu(self.conv_up2(interpolate(feat, scale_factor=2, mode='nearest')))
         out = self.conv_last(self.lrelu(self.conv_hr(feat)))
         return out
