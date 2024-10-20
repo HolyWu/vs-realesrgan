@@ -134,8 +134,13 @@ def realesrgan(
 
     device = torch.device("cuda", device_index)
 
-    stream = [torch.cuda.Stream(device=device) for _ in range(num_streams)]
-    stream_lock = [Lock() for _ in range(num_streams)]
+    inf_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
+    f2t_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
+    t2f_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
+
+    inf_stream_locks = [Lock() for _ in range(num_streams)]
+    f2t_stream_locks = [Lock() for _ in range(num_streams)]
+    t2f_stream_locks = [Lock() for _ in range(num_streams)]
 
     if model_path is None:
         model_name = f"{RealESRGANModel(model).name}.pth"
@@ -281,9 +286,12 @@ def realesrgan(
             index = (index + 1) % num_streams
             local_index = index
 
-        with stream_lock[local_index], torch.cuda.stream(stream[local_index]):
+        with f2t_stream_locks[local_index], torch.cuda.stream(f2t_streams[local_index]):
             img = frame_to_tensor(f[0], device).unsqueeze(0)
 
+            f2t_streams[local_index].synchronize()
+
+        with inf_stream_locks[local_index], torch.cuda.stream(inf_streams[local_index]):
             if all(t > 0 for t in tile):
                 output = tile_process(img, scale, tile, tile_pad, pad_w, pad_h, backend, local_index)
             else:
@@ -297,7 +305,10 @@ def realesrgan(
 
                 output = output[:, :, : h * scale, : w * scale]
 
-            return tensor_to_frame(output, f[1].copy())
+            inf_streams[local_index].synchronize()
+
+        with t2f_stream_locks[local_index], torch.cuda.stream(t2f_streams[local_index]):
+            return tensor_to_frame(output, f[1].copy(), t2f_streams[local_index])
 
     new_clip = clip.std.BlankClip(width=clip.width * scale, height=clip.height * scale, keep=True)
     return new_clip.std.FrameEval(
@@ -307,14 +318,21 @@ def realesrgan(
 
 def frame_to_tensor(frame: vs.VideoFrame, device: torch.device) -> torch.Tensor:
     return torch.stack(
-        [torch.from_numpy(np.asarray(frame[plane])).to(device) for plane in range(frame.format.num_planes)]
+        [
+            torch.from_numpy(np.asarray(frame[plane])).to(device, non_blocking=True)
+            for plane in range(frame.format.num_planes)
+        ]
     ).clamp(0.0, 1.0)
 
 
-def tensor_to_frame(tensor: torch.Tensor, frame: vs.VideoFrame) -> vs.VideoFrame:
-    array = tensor.squeeze(0).detach().cpu().numpy()
+def tensor_to_frame(tensor: torch.Tensor, frame: vs.VideoFrame, stream: torch.cuda.Stream) -> vs.VideoFrame:
+    tensor = tensor.squeeze(0).detach()
+    tensors = [tensor[plane].to("cpu", non_blocking=True) for plane in range(frame.format.num_planes)]
+
+    stream.synchronize()
+
     for plane in range(frame.format.num_planes):
-        np.copyto(np.asarray(frame[plane]), array[plane])
+        np.copyto(np.asarray(frame[plane]), tensors[plane].numpy())
     return frame
 
 
