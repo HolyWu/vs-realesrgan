@@ -3,16 +3,17 @@ Training Real-World Blind Super-Resolution with Pure Synthetic Data, based on ht
 
 
 ## Dependencies
-- [PyTorch](https://pytorch.org/get-started/) 2.4.0.dev or later
+- [PyTorch](https://pytorch.org/get-started/) 2.6.0.dev
 - [VapourSynth](http://www.vapoursynth.com/) R66 or later
 
-`trt` requires additional Python packages:
-- [TensorRT](https://developer.nvidia.com/tensorrt/) 10.0.1
-- [Torch-TensorRT](https://pytorch.org/TensorRT/) 2.4.0.dev
+`trt` requires additional packages:
+- [Torch-TensorRT](https://pytorch.org/TensorRT/) 2.6.0.dev
 
-To install TensorRT, run `pip install tensorrt==10.0.1 tensorrt-cu12_bindings==10.0.1 tensorrt-cu12_libs==10.0.1 --extra-index-url https://pypi.nvidia.com`
-
-To install Torch-TensorRT, Windows users can pip install the whl file on [Releases](https://github.com/HolyWu/vs-realesrgan/releases). Linux users can run `pip install --pre torch_tensorrt --index-url https://download.pytorch.org/whl/nightly/cu124` (requires PyTorch nightly build).
+To install the latest nightly build of PyTorch and Torch-TensorRT, run:
+```
+pip install -U packaging setuptools wheel
+pip install --pre -U torch torchvision torch_tensorrt --index-url https://download.pytorch.org/whl/nightly/cu124 --extra-index-url https://pypi.nvidia.com
+```
 
 
 ## Installation
