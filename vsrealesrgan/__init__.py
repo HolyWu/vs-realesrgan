@@ -59,6 +59,11 @@ class RealESRGANModel(IntEnum):
     Ani4Kv2_Compact_2x = 203
     Ani4Kv2_UltraCompact_2x = 204
 
+    cHiDeNoise_Compact = 300
+    LDVDeNoise_35mm_Compact = 301
+
+    Anime1080Fixer_SuperUltraCompact_1x = 400
+
 
 @torch.inference_mode()
 def realesrgan(

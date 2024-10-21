@@ -26,6 +26,7 @@ if __name__ == "__main__":
     models = [
         "Ani4Kv2_Compact_2x",
         "Ani4Kv2_UltraCompact_2x",
+        "Anime1080Fixer_SuperUltraCompact_1x",
         "AnimeJaNai_HD_V3_Compact_2x",
         "AnimeJaNai_HD_V3_SuperUltraCompact_2x",
         "AnimeJaNai_HD_V3_UltraCompact_2x",
@@ -38,7 +39,9 @@ if __name__ == "__main__":
         "AnimeJaNai_V2_UltraCompact_2x",
         "AniScale2_Compact_2x",
         "AniScale2_Refiner_1x",
+        "cHiDeNoise_Compact",
         "ESRGAN_SRx4",
+        "LDVDeNoise_35mm_Compact",
         "OpenProteus_Compact_2x",
         "realesr_animevideov3",
         "realesr_general_wdn_x4v3",
