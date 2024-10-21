@@ -49,6 +49,9 @@ class RealESRGANModel(IntEnum):
     AnimeJaNai_HD_V3Sharp1_UltraCompact_2x = 104
     AnimeJaNai_HD_V3Sharp1_SuperUltraCompact_2x = 105
     AnimeJaNai_SD_V1beta34_Compact_2x = 106
+    AnimeJaNai_V2_Compact_2x = 107
+    AnimeJaNai_V2_UltraCompact_2x = 108
+    AnimeJaNai_V2_SuperUltraCompact_2x = 109
 
     AniScale2_Compact_2x = 200
     AniScale2_Refiner_1x = 201
