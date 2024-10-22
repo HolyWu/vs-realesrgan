@@ -411,7 +411,7 @@ def frame_to_tensor(frame: vs.VideoFrame, pinned_tensor: torch.Tensor, device: t
             pinned_tensor[plane].copy_(torch.from_numpy(np.asarray(frame[plane]))).to(device, non_blocking=True)
             for plane in range(frame.format.num_planes)
         ]
-    ).clamp(0.0, 1.0)
+    )
 
 
 def tensor_to_frame(tensor: torch.Tensor, frame: vs.VideoFrame, stream: torch.cuda.Stream) -> vs.VideoFrame:

@@ -106,6 +106,7 @@ class RRDBNet(nn.Module):
         self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
 
     def forward(self, x):
+        x = x.clamp(0.0, 1.0)
         if self.scale == 2:
             feat = pixel_unshuffle(x, 2)
         elif self.scale == 1:
