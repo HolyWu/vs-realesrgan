@@ -176,14 +176,6 @@ def realesrgan(
 
     device = torch.device("cuda", device_index)
 
-    inf_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
-    f2t_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
-    t2f_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
-
-    inf_stream_locks = [Lock() for _ in range(num_streams)]
-    f2t_stream_locks = [Lock() for _ in range(num_streams)]
-    t2f_stream_locks = [Lock() for _ in range(num_streams)]
-
     if model_path is None:
         model_name = f"{RealESRGANModel(model).name}.pth"
         model_path = os.path.join(model_dir, model_name)
@@ -344,6 +336,18 @@ def realesrgan(
     index = -1
     index_lock = Lock()
 
+    inf_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
+    f2t_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
+    t2f_streams = [torch.cuda.Stream(device) for _ in range(num_streams)]
+
+    inf_stream_locks = [Lock() for _ in range(num_streams)]
+    f2t_stream_locks = [Lock() for _ in range(num_streams)]
+    t2f_stream_locks = [Lock() for _ in range(num_streams)]
+
+    pinned_tensors = [
+        torch.empty([num_batches, 3, clip.height, clip.width], dtype=dtype, pin_memory=True) for _ in range(num_streams)
+    ]
+
     @torch.inference_mode()
     def inference(n: int, f: list[vs.VideoFrame]) -> vs.VideoFrame:
         nonlocal index
@@ -352,7 +356,9 @@ def realesrgan(
             local_index = index
 
         with f2t_stream_locks[local_index], torch.cuda.stream(f2t_streams[local_index]):
-            img = torch.stack([frame_to_tensor(f[i], device) for i in range(num_batches)])
+            img = torch.stack(
+                [frame_to_tensor(f[i], pinned_tensors[local_index][i], device) for i in range(num_batches)]
+            )
 
             f2t_streams[local_index].synchronize()
 
@@ -397,10 +403,10 @@ def realesrgan(
     return output
 
 
-def frame_to_tensor(frame: vs.VideoFrame, device: torch.device) -> torch.Tensor:
+def frame_to_tensor(frame: vs.VideoFrame, pinned_tensor: torch.Tensor, device: torch.device) -> torch.Tensor:
     return torch.stack(
         [
-            torch.from_numpy(np.asarray(frame[plane])).to(device, non_blocking=True)
+            pinned_tensor[plane].copy_(torch.from_numpy(np.asarray(frame[plane]))).to(device, non_blocking=True)
             for plane in range(frame.format.num_planes)
         ]
     ).clamp(0.0, 1.0)
