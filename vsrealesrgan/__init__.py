@@ -367,14 +367,16 @@ def realesrgan(
                 output = tile_process(img, scale, tile, tile_pad, pad_w, pad_h, backend, local_index)
             else:
                 h, w = img.shape[2:]
-                img = F.pad(img, (0, pad_w - w, 0, pad_h - h), "replicate")
+                if need_pad := pad_w - w > 0 or pad_h - h > 0:
+                    img = F.pad(img, (0, pad_w - w, 0, pad_h - h), "replicate")
 
                 if trt:
                     output = module[local_index](img)
                 else:
                     output = module(img)
 
-                output = output[:, :, : h * scale, : w * scale]
+                if need_pad:
+                    output = output[:, :, : h * scale, : w * scale]
 
             inf_streams[local_index].synchronize()
 
@@ -468,7 +470,8 @@ def tile_process(
             input_tile = img[:, :, input_start_y_pad:input_end_y_pad, input_start_x_pad:input_end_x_pad]
 
             h, w = input_tile.shape[2:]
-            input_tile = F.pad(input_tile, (0, pad_w - w, 0, pad_h - h), "replicate")
+            if need_pad := pad_w - w > 0 or pad_h - h > 0:
+                input_tile = F.pad(input_tile, (0, pad_w - w, 0, pad_h - h), "replicate")
 
             # process tile
             if isinstance(backend, Backend.TensorRT):
@@ -476,7 +479,8 @@ def tile_process(
             else:
                 output_tile = backend.module(input_tile)
 
-            output_tile = output_tile[:, :, : h * scale, : w * scale]
+            if need_pad:
+                output_tile = output_tile[:, :, : h * scale, : w * scale]
 
             # output tile area on total image
             output_start_x = input_start_x * scale
