@@ -21,6 +21,8 @@ __version__ = "5.1.0"
 os.environ["CI_BUILD"] = "1"
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
 
+warnings.filterwarnings("ignore", "The given NumPy array is not writable")
+
 model_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
 
@@ -287,7 +289,7 @@ def realesrgan(
             if trt_static_shape:
                 dynamic_shapes = None
 
-                inputs = [torch_tensorrt.Input(shape=[num_batches, 3, pad_h, pad_w], dtype=dtype)]
+                inputs = example_inputs
             else:
                 trt_min_shape.reverse()
                 trt_opt_shape.reverse()
@@ -330,8 +332,6 @@ def realesrgan(
         backend = Backend.TensorRT(module)
     else:
         backend = Backend.Torch(module)
-
-    warnings.filterwarnings("ignore", "The given NumPy array is not writable")
 
     index = -1
     index_lock = Lock()
