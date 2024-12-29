@@ -13,6 +13,7 @@ import torch
 import torch.nn.functional as F
 import vapoursynth as vs
 
+from .__main__ import download_model
 from .rrdbnet_arch import RRDBNet
 from .srvgg_arch import SRVGGNetCompact
 
@@ -74,6 +75,7 @@ def realesrgan(
     num_streams: int = 1,
     batch_size: int = 1,
     model: RealESRGANModel = RealESRGANModel.AnimeJaNai_V2_Compact_2x,
+    auto_download: bool = False,
     model_path: str | None = None,
     denoise_strength: float = 0.5,
     tile: list[int] = [0, 0],
@@ -97,6 +99,7 @@ def realesrgan(
     :param num_streams:             Number of CUDA streams to enqueue the kernels.
     :param batch_size:              Number of frames per batch.
     :param model:                   Model to use. Ignored if model_path is specified.
+    :param auto_download:           Automatically download the specified model if the file has not been downloaded.
     :param model_path:              Path to custom model file.
     :param denoise_strength:        Denoise strength for realesr-general-x4v3 model.
                                     0 for weak denoise (keep noise), 1 for strong denoise ability.
@@ -168,9 +171,6 @@ def realesrgan(
         if any(trt_min_shape[i] >= trt_max_shape[i] for i in range(2)):
             raise vs.Error("realesrgan: trt_min_shape must be less than trt_max_shape")
 
-    if os.path.getsize(os.path.join(model_dir, "Ani4Kv2_Compact_2x.pth")) == 0:
-        raise vs.Error("realesrgan: model files have not been downloaded. run 'python -m vsrealesrgan' first")
-
     torch.set_float32_matmul_precision("high")
 
     fp16 = clip.format.bits_per_sample == 16
@@ -181,6 +181,15 @@ def realesrgan(
     if model_path is None:
         model_name = f"{RealESRGANModel(model).name}.pth"
         model_path = os.path.join(model_dir, model_name)
+
+        if os.path.getsize(model_path) == 0:
+            if auto_download:
+                download_model(f"https://github.com/HolyWu/vs-realesrgan/releases/download/model/{model_name}")
+            else:
+                raise vs.Error(
+                    "realesrgan: model file has not been downloaded. run `python -m vsrealesrgan` to download all "
+                    "models, or set `auto_download=True` to only download the specified model"
+                )
     else:
         model_path = os.path.realpath(model_path)
         model_name = os.path.basename(model_path)
@@ -193,16 +202,10 @@ def realesrgan(
 
     if model == RealESRGANModel.realesr_general_x4v3 and denoise_strength != 1:
         wdn_model_path = model_path.replace("realesr_general_x4v3", "realesr_general_wdn_x4v3")
-        dni_weight = [denoise_strength, 1 - denoise_strength]
-
-        net_b = torch.load(wdn_model_path, map_location="cpu", weights_only=True)
-        if "params_ema" in net_b:
-            net_b = net_b["params_ema"]
-        elif "params" in net_b:
-            net_b = net_b["params"]
+        wdn_state_dict = torch.load(wdn_model_path, map_location="cpu", weights_only=True)["params"]
 
         for k, v in state_dict.items():
-            state_dict[k] = dni_weight[0] * v + dni_weight[1] * net_b[k]
+            state_dict[k] = denoise_strength * v + (1 - denoise_strength) * wdn_state_dict[k]
 
     if "conv_first.weight" in state_dict:
         num_feat = state_dict["conv_first.weight"].shape[0]
