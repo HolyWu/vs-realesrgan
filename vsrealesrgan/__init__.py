@@ -17,7 +17,7 @@ from .__main__ import download_model
 from .rrdbnet_arch import RRDBNet
 from .srvgg_arch import SRVGGNetCompact
 
-__version__ = "5.1.0"
+__version__ = "5.2.0"
 
 os.environ["CI_BUILD"] = "1"
 os.environ["CUDA_MODULE_LOADING"] = "LAZY"
