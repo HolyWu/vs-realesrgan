@@ -73,7 +73,7 @@ def realesrgan(
     device_index: int = 0,
     num_streams: int = 1,
     num_batches: int = 1,
-    model: RealESRGANModel = RealESRGANModel.AnimeJaNai_HD_V3_UltraCompact_2x,
+    model: RealESRGANModel = RealESRGANModel.AnimeJaNai_V2_Compact_2x,
     model_path: str | None = None,
     denoise_strength: float = 0.5,
     tile: list[int] = [0, 0],
