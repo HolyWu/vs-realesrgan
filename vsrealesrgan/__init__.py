@@ -72,7 +72,7 @@ def realesrgan(
     clip: vs.VideoNode,
     device_index: int = 0,
     num_streams: int = 1,
-    num_batches: int = 1,
+    batch_size: int = 1,
     model: RealESRGANModel = RealESRGANModel.AnimeJaNai_V2_Compact_2x,
     model_path: str | None = None,
     denoise_strength: float = 0.5,
@@ -95,7 +95,7 @@ def realesrgan(
                                     RGBH performs inference in FP16 mode while RGBS performs inference in FP32 mode.
     :param device_index:            Device ordinal of the GPU.
     :param num_streams:             Number of CUDA streams to enqueue the kernels.
-    :param num_batches:             Batch of frames per inference to perform.
+    :param batch_size:              Number of frames per batch.
     :param model:                   Model to use. Ignored if model_path is specified.
     :param model_path:              Path to custom model file.
     :param denoise_strength:        Denoise strength for realesr-general-x4v3 model.
@@ -134,8 +134,8 @@ def realesrgan(
     if num_streams < 1:
         raise vs.Error("realesrgan: num_streams must be at least 1")
 
-    if num_batches < 1:
-        raise vs.Error("realesrgan: num_batches must be at least 1")
+    if batch_size < 1:
+        raise vs.Error("realesrgan: batch_size must be at least 1")
 
     if model not in RealESRGANModel:
         raise vs.Error("realesrgan: model must be one of the members in RealESRGANModel")
@@ -267,7 +267,7 @@ def realesrgan(
             os.path.realpath(trt_cache_dir),
             (
                 f"{model_name}"
-                + f"_batch-{num_batches}"
+                + f"_batch-{batch_size}"
                 + f"_{dimensions}"
                 + f"_{'fp16' if fp16 else 'fp32'}"
                 + (f"_denoise-{denoise_strength}" if model == RealESRGANModel.realesr_general_x4v3 else "")
@@ -284,7 +284,7 @@ def realesrgan(
             if sys.stdout is None:
                 sys.stdout = open(os.devnull, "w")
 
-            example_inputs = (torch.zeros([num_batches, 3, pad_h, pad_w], dtype=dtype, device=device),)
+            example_inputs = (torch.zeros([batch_size, 3, pad_h, pad_w], dtype=dtype, device=device),)
 
             if trt_static_shape:
                 dynamic_shapes = None
@@ -303,9 +303,9 @@ def realesrgan(
 
                 inputs = [
                     torch_tensorrt.Input(
-                        min_shape=[num_batches, 3] + trt_min_shape,
-                        opt_shape=[num_batches, 3] + trt_opt_shape,
-                        max_shape=[num_batches, 3] + trt_max_shape,
+                        min_shape=[batch_size, 3] + trt_min_shape,
+                        opt_shape=[batch_size, 3] + trt_opt_shape,
+                        max_shape=[batch_size, 3] + trt_max_shape,
                         dtype=dtype,
                         name="x",
                     )
@@ -352,7 +352,7 @@ def realesrgan(
             local_index = index
 
         with f2t_stream_locks[local_index], torch.cuda.stream(f2t_streams[local_index]):
-            img = torch.stack([frame_to_tensor(f[i], device) for i in range(num_batches)])
+            img = torch.stack([frame_to_tensor(f[i], device) for i in range(batch_size)])
 
             f2t_streams[local_index].synchronize()
 
@@ -375,22 +375,22 @@ def realesrgan(
             inf_streams[local_index].synchronize()
 
         with t2f_stream_locks[local_index], torch.cuda.stream(t2f_streams[local_index]):
-            frame = tensor_to_frame(output[0], f[num_batches].copy(), t2f_streams[local_index])
-            for i in range(1, num_batches):
+            frame = tensor_to_frame(output[0], f[batch_size].copy(), t2f_streams[local_index])
+            for i in range(1, batch_size):
                 frame.props[f"vsrealesrgan_batch_frame{i}"] = tensor_to_frame(
-                    output[i], f[num_batches].copy(), t2f_streams[local_index]
+                    output[i], f[batch_size].copy(), t2f_streams[local_index]
                 )
             return frame
 
-    if (pad := (num_batches - clip.num_frames % num_batches) % num_batches) > 0:
+    if (pad := (batch_size - clip.num_frames % batch_size) % batch_size) > 0:
         clip = clip.std.DuplicateFrames([clip.num_frames - 1] * pad)
 
-    clips = [clip[i::num_batches] for i in range(num_batches)]
+    clips = [clip[i::batch_size] for i in range(batch_size)]
     new_clip = clips[0].std.BlankClip(width=clip.width * scale, height=clip.height * scale, keep=True)
     clips.append(new_clip)
 
     outputs = [new_clip.std.FrameEval(lambda n: new_clip.std.ModifyFrame(clips, inference), clip_src=clips)]
-    for i in range(1, num_batches):
+    for i in range(1, batch_size):
         outputs.append(outputs[0].std.PropToClip(f"vsrealesrgan_batch_frame{i}"))
 
     output = vs.core.std.Interleave(outputs)
