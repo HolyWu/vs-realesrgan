@@ -390,6 +390,7 @@ def realesrgan(
 
     clips = [clip[i::batch_size] for i in range(batch_size)]
     new_clip = clips[0].std.BlankClip(width=clip.width * scale, height=clip.height * scale, keep=True)
+    new_clip = new_clip.std.CopyFrameProps(clips[0])
     clips.append(new_clip)
 
     outputs = [new_clip.std.FrameEval(lambda n: new_clip.std.ModifyFrame(clips, inference), clip_src=clips)]
