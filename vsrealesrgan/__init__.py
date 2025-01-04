@@ -4,6 +4,7 @@ import math
 import os
 import sys
 import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import IntEnum
 from threading import Lock
@@ -68,6 +69,18 @@ class RealESRGANModel(IntEnum):
     Anime1080Fixer_SuperUltraCompact_1x = 400
 
 
+@contextmanager
+def redirect_stdout_to_stderr():
+    old_stdout = os.dup(1)
+    try:
+        os.dup2(2, 1)
+        yield
+    finally:
+        os.dup2(old_stdout, 1)
+        os.close(old_stdout)
+
+
+@redirect_stdout_to_stderr()
 @torch.inference_mode()
 def realesrgan(
     clip: vs.VideoNode,
